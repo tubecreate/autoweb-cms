@@ -324,6 +324,12 @@ async function handleFormSubmit(e) {
     return;
   }
 
+  // Validate API Token entered in Global API Key field
+  if (authType === 'key' && apiKey.startsWith('cfut_')) {
+    alert('Lỗi: Khóa bạn nhập bắt đầu bằng "cfut_" - đây là Cloudflare API Token chứ không phải Global API Key. Vui lòng đổi "Loại xác thực" thành "Scoped API Token" và nhập khóa này vào trường "API Token".');
+    return;
+  }
+
   const creds = {
     name,
     template,
@@ -962,6 +968,12 @@ async function handleCredsFormSubmit(e) {
   // Validate Google API Key copy-paste error
   if (authType === 'key' && apiKey.startsWith('AIza')) {
     alert('Lỗi: Khóa bạn nhập bắt đầu bằng "AIza" - đây là Google API Key (không phải Cloudflare API Key). Vui lòng lấy đúng Global API Key từ Cloudflare Dashboard (My Profile > API Tokens > Global API Key).');
+    return;
+  }
+
+  // Validate API Token entered in Global API Key field
+  if (authType === 'key' && apiKey.startsWith('cfut_')) {
+    alert('Lỗi: Khóa bạn nhập bắt đầu bằng "cfut_" - đây là Cloudflare API Token chứ không phải Global API Key. Vui lòng đổi "Loại xác thực" thành "Scoped API Token" và nhập khóa này vào trường "API Token".');
     return;
   }
 
