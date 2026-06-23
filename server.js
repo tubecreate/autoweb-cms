@@ -20,7 +20,32 @@ const LOGS_DIR = path.join(process.cwd(), 'logs');
 const SITES_DIR = path.join(process.cwd(), 'sites');
 const TEMPLATE_DIR = path.join(process.cwd(), 'templates', 'ngo-quyen');
 
+// Helper to construct environment variables for Cloudflare commands cleanly, preventing header conflicts
+function getCloudflareEnv(creds) {
+  const env = { ...process.env };
+  
+  if (creds.accountId) {
+    env.CLOUDFLARE_ACCOUNT_ID = creds.accountId;
+  } else {
+    delete env.CLOUDFLARE_ACCOUNT_ID;
+  }
+  
+  if (creds.apiToken) {
+    env.CLOUDFLARE_API_TOKEN = creds.apiToken;
+    delete env.CLOUDFLARE_API_KEY;
+    delete env.CLOUDFLARE_EMAIL;
+  } else {
+    if (creds.apiKey) env.CLOUDFLARE_API_KEY = creds.apiKey;
+    else delete env.CLOUDFLARE_API_KEY;
 
+    if (creds.email) env.CLOUDFLARE_EMAIL = creds.email;
+    else delete env.CLOUDFLARE_EMAIL;
+
+    delete env.CLOUDFLARE_API_TOKEN;
+  }
+  
+  return env;
+}
 
 // Ensure directories exist
 await fs.mkdir(LOGS_DIR, { recursive: true });
@@ -285,13 +310,7 @@ app.delete('/api/sites/:name', async (req, res) => {
 // Cloudflare cleanup handler
 async function deleteResourcesFromCloudflare(site, creds) {
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: creds.apiKey || '',
-      CLOUDFLARE_EMAIL: creds.email || '',
-      CLOUDFLARE_API_TOKEN: creds.apiToken || '',
-      CLOUDFLARE_ACCOUNT_ID: creds.accountId || ''
-    }
+    env: getCloudflareEnv(creds)
   };
 
   // Delete D1 Database
@@ -336,13 +355,7 @@ async function deploySite(siteName, creds) {
 
   const envOptions = {
     cwd: path.join(SITES_DIR, siteName),
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: creds.apiKey || '',
-      CLOUDFLARE_EMAIL: creds.email || '',
-      CLOUDFLARE_API_TOKEN: creds.apiToken || '',
-      CLOUDFLARE_ACCOUNT_ID: creds.accountId || ''
-    }
+    env: getCloudflareEnv(creds)
   };
 
   // 1. Check if template node_modules exists
@@ -545,13 +558,7 @@ app.get('/api/sites/:name/settings', async (req, res) => {
   }
 
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: site.apiKey || '',
-      CLOUDFLARE_EMAIL: site.email || '',
-      CLOUDFLARE_ACCOUNT_ID: site.accountId || '',
-      CLOUDFLARE_API_TOKEN: site.apiToken || ''
-    }
+    env: getCloudflareEnv(site)
   };
 
   try {
@@ -621,13 +628,7 @@ app.post('/api/sites/:name/settings', async (req, res) => {
   }
 
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: site.apiKey || '',
-      CLOUDFLARE_EMAIL: site.email || '',
-      CLOUDFLARE_ACCOUNT_ID: site.accountId || '',
-      CLOUDFLARE_API_TOKEN: site.apiToken || ''
-    }
+    env: getCloudflareEnv(site)
   };
 
   const allowedKeys = [
@@ -705,13 +706,7 @@ app.get('/api/sites/:name/api-keys', async (req, res) => {
   }
 
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: site.apiKey || '',
-      CLOUDFLARE_EMAIL: site.email || '',
-      CLOUDFLARE_ACCOUNT_ID: site.accountId || '',
-      CLOUDFLARE_API_TOKEN: site.apiToken || ''
-    }
+    env: getCloudflareEnv(site)
   };
 
   try {
@@ -759,13 +754,7 @@ app.post('/api/sites/:name/api-keys', async (req, res) => {
   const targetLabel = label || 'Default API Key';
 
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: site.apiKey || '',
-      CLOUDFLARE_EMAIL: site.email || '',
-      CLOUDFLARE_ACCOUNT_ID: site.accountId || '',
-      CLOUDFLARE_API_TOKEN: site.apiToken || ''
-    }
+    env: getCloudflareEnv(site)
   };
 
   try {
@@ -837,13 +826,7 @@ app.delete('/api/sites/:name/api-keys/:id', async (req, res) => {
   }
 
   const envOptions = {
-    env: {
-      ...process.env,
-      CLOUDFLARE_API_KEY: site.apiKey || '',
-      CLOUDFLARE_EMAIL: site.email || '',
-      CLOUDFLARE_ACCOUNT_ID: site.accountId || '',
-      CLOUDFLARE_API_TOKEN: site.apiToken || ''
-    }
+    env: getCloudflareEnv(site)
   };
 
   try {
