@@ -146,6 +146,16 @@ function analyzeError(err, context = '') {
     return '⚠️ R2 Storage chưa được bật trên tài khoản này. Vào Cloudflare Dashboard → R2 để kích hoạt.';
   }
 
+  // CF Pages reserved binding name
+  if (output.includes('reserved') && output.includes('assets')) {
+    return '❌ Lỗi cấu hình wrangler.toml: tên "ASSETS" bị reserved trong CF Pages. Đây là lỗi nội bộ — vui lòng thử lại, hệ thống đã được cập nhật để tránh lỗi này.';
+  }
+
+  // wrangler.toml config validation
+  if (output.includes('usererror') || (output.includes('wrangler.toml') && output.includes('invalid'))) {
+    return '❌ Lỗi cấu hình wrangler.toml. Vui lòng thử lại hoặc liên hệ hỗ trợ.';
+  }
+
   // Auth errors
   if (output.includes('authentication') || output.includes('unauthorized') || output.includes('10000') || output.includes('invalid api token') || output.includes('authenticationerror')) {
     return '❌ Lỗi xác thực Cloudflare API. Kiểm tra lại API Token / Global API Key đã nhập trong Cấu hình CF.';
