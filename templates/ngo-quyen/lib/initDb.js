@@ -230,6 +230,10 @@ export async function seedData(adminPassword) {
       ['moderator', modHashed, 'Điều hành viên', 'mod@ngo-quyen.edu.vn', 'mod', '2026-01-15']
     );
     console.log('✅ Default users seeded');
+  } else if (adminPassword) {
+    const hashed = await bcrypt.hash(passwordToSeed, 10);
+    await query('UPDATE users SET password = ? WHERE username = ?', [hashed, 'admin']);
+    console.log('👑 Admin user password updated to custom password');
   }
 
   // Seed categories

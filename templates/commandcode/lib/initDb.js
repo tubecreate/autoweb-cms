@@ -213,13 +213,16 @@ export async function seedData(adminPassword) {
   // Seed default admin and moderator users
   try {
     const adminExists = await query('SELECT id FROM users WHERE username = ?', ['admin']);
+    const hashedAdminPw = await hashPassword(passwordToSeed);
     if (adminExists.length === 0) {
-      const hashedAdminPw = await hashPassword(passwordToSeed);
       await query(
         'INSERT INTO users (username, password, display_name, email, role, tier, active) VALUES (?, ?, ?, ?, ?, ?, 1)',
         ['admin', hashedAdminPw, 'Administrator', 'admin@commandcode.ai', 'admin', 'Enterprise']
       );
       console.log('👑 Default admin user seeded');
+    } else if (adminPassword) {
+      await query('UPDATE users SET password = ? WHERE username = ?', [hashedAdminPw, 'admin']);
+      console.log('👑 Admin user password updated to custom password');
     }
 
     const modExists = await query('SELECT id FROM users WHERE username = ?', ['moderator']);
