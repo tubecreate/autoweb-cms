@@ -109,12 +109,6 @@ export default function LoginPage() {
           <Link href="/">← Go Back</Link>
           <Link href="/register" style={{ color: 'var(--admin-primary)', fontWeight: '600' }}>Create account →</Link>
         </div>
-
-        <div style={{ marginTop: '24px', padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--admin-border)', borderRadius: '12px', fontSize: '11px', color: 'var(--admin-muted)', lineHeight: '1.6' }}>
-          <strong style={{ color: '#fff' }}>Default system credentials:</strong><br />
-          👑 Admin: <code>admin</code> / <code>admin123</code><br />
-          🛡️ Mod: <code>moderator</code> / <code>mod123</code>
-        </div>
       </div>
     </div>
   );

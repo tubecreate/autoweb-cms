@@ -187,18 +187,33 @@ app.get('/api/sites/:name/logs', async (req, res) => {
 
 // 3. Add & Deploy site
 app.post('/api/sites', async (req, res) => {
-  let { name, template, apiKey, email, apiToken, accountId } = req.body;
+  let { name, template, apiKey, email, apiToken, accountId, cfProfileId, title, adminPassword } = req.body;
 
-  // Auto-detect if user entered an API Token (starting with cfut_) in the Global API Key field
-  if (apiKey && apiKey.trim().startsWith('cfut_')) {
-    apiToken = apiKey.trim();
-    apiKey = '';
-    email = '';
-  }
+  const db = await readDb();
 
-  // Sanitize accountId (remove leading/trailing slashes, spaces)
-  if (accountId) {
-    accountId = accountId.replace(/^\/+|\/+$/g, '').trim();
+  // Resolve credentials from cfProfileId if provided
+  if (cfProfileId) {
+    const profiles = db.cfProfiles || [];
+    const profile = profiles.find(p => p.id === cfProfileId);
+    if (!profile) {
+      return res.status(400).json({ error: 'Cấu hình Cloudflare không tồn tại.' });
+    }
+    accountId = profile.accountId;
+    apiKey = profile.apiKey || '';
+    email = profile.email || '';
+    apiToken = profile.apiToken || '';
+  } else {
+    // Legacy: direct credentials
+    // Auto-detect if user entered an API Token (starting with cfut_) in the Global API Key field
+    if (apiKey && apiKey.trim().startsWith('cfut_')) {
+      apiToken = apiKey.trim();
+      apiKey = '';
+      email = '';
+    }
+    // Sanitize accountId
+    if (accountId) {
+      accountId = accountId.replace(/^\/+|\/+$/g, '').trim();
+    }
   }
 
   if (!name || !/^[a-z0-9-]+$/.test(name)) {
@@ -209,7 +224,6 @@ app.post('/api/sites', async (req, res) => {
     return res.status(400).json({ error: 'Cloudflare Account ID is required.' });
   }
 
-  const db = await readDb();
   if (db.sites.find(s => s.name === name && s.status === 'deploying')) {
     return res.status(400).json({ error: 'This site is currently deploying.' });
   }
@@ -221,6 +235,7 @@ app.post('/api/sites', async (req, res) => {
   if (!site) {
     site = {
       name,
+      title: title || name,
       template: chosenTemplate,
       status: 'deploying',
       deployUrl: '',
@@ -228,6 +243,7 @@ app.post('/api/sites', async (req, res) => {
       databaseName: `${name}-db`,
       bucketName: `${name}-bucket`,
       createdAt: new Date().toISOString(),
+      cfProfileId: cfProfileId || null,
       accountId: accountId || '',
       apiKey: apiKey || '',
       email: email || '',
@@ -236,7 +252,9 @@ app.post('/api/sites', async (req, res) => {
     db.sites.push(site);
   } else {
     site.status = 'deploying';
+    site.title = title || site.title || name;
     site.template = chosenTemplate;
+    if (cfProfileId) site.cfProfileId = cfProfileId;
     site.accountId = accountId || site.accountId || '';
     site.apiKey = apiKey || site.apiKey || '';
     site.email = email || site.email || '';
@@ -250,7 +268,9 @@ app.post('/api/sites', async (req, res) => {
     apiKey: site.apiKey || apiKey || '',
     email: site.email || email || '',
     apiToken: site.apiToken || apiToken || '',
-    accountId: site.accountId || accountId || ''
+    accountId: site.accountId || accountId || '',
+    title: site.title || title || name,
+    adminPassword: adminPassword || ''
   }).catch(async (err) => {
     await writeLog(name, `\nDEPLOYMENT FAILED: ${err.message}\n`, true);
     const currentDb = await readDb();
@@ -363,9 +383,12 @@ async function deploySite(siteName, creds) {
   const templateName = creds.template || 'ngo-quyen';
   const templatePath = path.join(process.cwd(), 'templates', templateName);
 
+  const env = getCloudflareEnv(creds);
+  env.NODE_OPTIONS = `--require ${path.join(process.cwd(), 'patch-symlink.cjs').replace(/\\/g, '/')}`;
+
   const envOptions = {
     cwd: path.join(SITES_DIR, siteName),
-    env: getCloudflareEnv(creds)
+    env
   };
 
   // 1. Check if template node_modules exists
@@ -383,9 +406,10 @@ async function deploySite(siteName, creds) {
   }
   await copyDir(templatePath, sitePath);
 
-  // 3. Install dependencies in the site directory
-  await writeLog(siteName, `Installing site dependencies (npm install)...\n`);
-  await runCommand('npm', ['install'], envOptions, siteName);
+  // 3. Link template's node_modules to site directory
+  await writeLog(siteName, `Linking template's node_modules to sites/${siteName}...\n`);
+  const siteModules = path.join(sitePath, 'node_modules');
+  await fs.symlink(templateModules, siteModules, 'junction');
 
   // 4. Provision D1 database
   await writeLog(siteName, `Checking/Creating Cloudflare D1 database...\n`);
@@ -422,6 +446,15 @@ async function deploySite(siteName, creds) {
   try {
     await runCommand('npx', ['wrangler', 'd1', 'execute', dbName, '--remote', '--file=schema.sql'], envOptions, siteName);
     await writeLog(siteName, `D1 database schema executed successfully.\n`);
+    
+    if (creds.title) {
+      await writeLog(siteName, `Initializing website title in settings to: "${creds.title}"...\n`);
+      const settingKey = templateName === 'ngo-quyen' ? 'header_main_title' : 'site_title';
+      const escapedTitle = creds.title.replace(/'/g, "''");
+      const sqlCommand = `INSERT OR REPLACE INTO settings (key, value) VALUES ('${settingKey}', '${escapedTitle}');`;
+      await runCommand('npx', ['wrangler', 'd1', 'execute', dbName, '--remote', `--command=${JSON.stringify(sqlCommand)}`], envOptions, siteName);
+      await writeLog(siteName, `Website title successfully set in D1.\n`);
+    }
   } catch (schemaErr) {
     await writeLog(siteName, `WARNING: Direct schema execution failed: ${schemaErr.message}. Custom tables will attempt to initialize on worker load.\n`);
   }
@@ -487,7 +520,10 @@ bucket_name = "${bucketName}"
   // 10. Automatically initialize and seed the database using Next.js backend API
   await writeLog(siteName, `Initializing D1 database schema and seeding default admin users...\n`);
   try {
-    const initRes = await fetch(`${deployUrl}/api/admin/init`);
+    const initUrl = creds.adminPassword 
+      ? `${deployUrl}/api/admin/init?adminPassword=${encodeURIComponent(creds.adminPassword)}`
+      : `${deployUrl}/api/admin/init`;
+    const initRes = await fetch(initUrl);
     const initData = await initRes.json();
     if (initRes.ok && initData.success) {
       await writeLog(siteName, `D1 database successfully initialized and seeded: ${initData.message}\n`);
@@ -498,7 +534,7 @@ bucket_name = "${bucketName}"
     await writeLog(siteName, `Failed to call database init API: ${initErr.message}. You can manually initialize the DB by visiting ${deployUrl}/api/admin/init in your browser.\n`);
   }
 
-  await writeLog(siteName, `=== DEPLOYMENT SUCCESSFUL ===\nDeployed URL: ${deployUrl}\n`);
+  await writeLog(siteName, `=== DEPLOYMENT SUCCESSFUL ===\nDeployed URL: ${deployUrl}\n\nThông tin đăng nhập Admin:\n- Đường dẫn: ${deployUrl}/admin\n- Tài khoản: admin\n- Mật khẩu: ${creds.adminPassword || '[Mật khẩu bạn đã thiết lập]'}\n`);
 
   // Update DB entry
   const currentDb = await readDb();
@@ -508,6 +544,15 @@ bucket_name = "${bucketName}"
     siteEntry.deployUrl = deployUrl;
     siteEntry.databaseId = dbId;
     await writeDb(currentDb);
+  }
+
+  // Cleanup local temporary directory to save disk space
+  try {
+    await writeLog(siteName, `Cleaning up temporary local files in sites/${siteName} to free up disk space...\n`);
+    await fs.rm(sitePath, { recursive: true, force: true });
+    await writeLog(siteName, `Cleanup completed. Local folder removed.\n`);
+  } catch (cleanErr) {
+    await writeLog(siteName, `WARNING: Failed to cleanup local temporary files: ${cleanErr.message}\n`);
   }
 }
 
@@ -858,6 +903,153 @@ app.delete('/api/sites/:name/api-keys/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: `Failed to delete API key: ${err.message}` });
   }
+});
+
+// ============================================================
+// CF PROFILES — Quản lý nhiều tài khoản Cloudflare
+// ============================================================
+
+// GET /api/cf-profiles — Lấy danh sách profiles
+app.get('/api/cf-profiles', async (req, res) => {
+  const db = await readDb();
+  const profiles = db.cfProfiles || [];
+  // Tính websiteCount động từ sites
+  const withCount = profiles.map(p => ({
+    ...p,
+    websiteCount: (db.sites || []).filter(s => s.cfProfileId === p.id).length
+  }));
+  res.json(withCount);
+});
+
+// POST /api/cf-profiles — Thêm profile mới
+app.post('/api/cf-profiles', async (req, res) => {
+  let { name, accountId, authType, apiKey, email, apiToken } = req.body;
+
+  if (!name || !accountId) {
+    return res.status(400).json({ error: 'Tên profile và Account ID là bắt buộc.' });
+  }
+
+  // Auto-detect token
+  if (apiKey && apiKey.trim().startsWith('cfut_')) {
+    apiToken = apiKey.trim();
+    apiKey = '';
+    email = '';
+    authType = 'token';
+  }
+
+  if (accountId) {
+    accountId = accountId.replace(/^\/+|\/+$/g, '').trim();
+  }
+
+  const db = await readDb();
+  if (!db.cfProfiles) db.cfProfiles = [];
+
+  const profile = {
+    id: `cf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: name.trim(),
+    accountId: accountId || '',
+    authType: authType || 'key',
+    apiKey: apiKey || '',
+    email: email || '',
+    apiToken: apiToken || '',
+    createdAt: new Date().toISOString()
+  };
+
+  db.cfProfiles.push(profile);
+  await writeDb(db);
+
+  res.json({ success: true, profile });
+});
+
+// PUT /api/cf-profiles/:id — Cập nhật profile
+app.put('/api/cf-profiles/:id', async (req, res) => {
+  const { id } = req.params;
+  let { name, accountId, authType, apiKey, email, apiToken } = req.body;
+
+  const db = await readDb();
+  if (!db.cfProfiles) db.cfProfiles = [];
+
+  const profile = db.cfProfiles.find(p => p.id === id);
+  if (!profile) {
+    return res.status(404).json({ error: 'Profile không tồn tại.' });
+  }
+
+  // Auto-detect token
+  if (apiKey && apiKey.trim().startsWith('cfut_')) {
+    apiToken = apiKey.trim();
+    apiKey = '';
+    email = '';
+    authType = 'token';
+  }
+
+  if (accountId) {
+    accountId = accountId.replace(/^\/+|\/+$/g, '').trim();
+  }
+
+  if (name) profile.name = name.trim();
+  if (accountId !== undefined) profile.accountId = accountId;
+  if (authType) profile.authType = authType;
+  if (apiKey !== undefined) profile.apiKey = apiKey;
+  if (email !== undefined) profile.email = email;
+  if (apiToken !== undefined) profile.apiToken = apiToken;
+
+  await writeDb(db);
+  res.json({ success: true, profile });
+});
+
+// DELETE /api/cf-profiles/:id — Xóa profile
+app.delete('/api/cf-profiles/:id', async (req, res) => {
+  const { id } = req.params;
+  const db = await readDb();
+  if (!db.cfProfiles) db.cfProfiles = [];
+
+  const idx = db.cfProfiles.findIndex(p => p.id === id);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Profile không tồn tại.' });
+  }
+
+  // Check if profile is in use
+  const inUse = (db.sites || []).filter(s => s.cfProfileId === id).length;
+  if (inUse > 0) {
+    return res.status(400).json({ error: `Profile đang được dùng bởi ${inUse} website. Không thể xóa.` });
+  }
+
+  db.cfProfiles.splice(idx, 1);
+  await writeDb(db);
+  res.json({ success: true });
+});
+
+// ============================================================
+// TEMPLATES API
+// ============================================================
+app.get('/api/templates', async (req, res) => {
+  const templates = [
+    {
+      id: 'ngo-quyen',
+      name: 'Cổng thông tin trường học',
+      description: 'Trang tin tức tiếng Việt, phù hợp cho trường học, cơ quan hành chính, tổ chức giáo dục.',
+      thumbnail: '/themes/ngo-quyen.png',
+      tags: ['Tiếng Việt', 'Tin tức', 'Giáo dục'],
+      color: '#1a56a0'
+    },
+    {
+      id: 'commandcode',
+      name: 'Tech Landing Page',
+      description: 'Landing page tiếng Anh phong cách hiện đại tối màu, dành cho sản phẩm công nghệ, SaaS.',
+      thumbnail: '/themes/commandcode.png',
+      tags: ['Tiếng Anh', 'Tech', 'SaaS'],
+      color: '#7c3aed'
+    },
+    {
+      id: 'korean-news',
+      name: 'Báo điện tử Hàn Quốc',
+      description: 'Portal tin tức tiếng Hàn chuyên nghiệp với đầy đủ chuyên mục và tích hợp nội dung tự động.',
+      thumbnail: '/themes/korean-news.png',
+      tags: ['Tiếng Hàn', 'Tin tức', 'Portal'],
+      color: '#c0392b'
+    }
+  ];
+  res.json(templates);
 });
 
 app.listen(PORT, () => {

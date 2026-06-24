@@ -56,7 +56,7 @@ export async function POST(request) {
       return NextResponse.json({ error: `A page with slug '${slug}' already exists` }, { status: 400 });
     }
 
-    const layoutStr = Array.isArray(layout) ? JSON.stringify(layout) : (layout || '[]');
+    const layoutStr = typeof layout === 'object' && layout !== null ? JSON.stringify(layout) : (layout || '[]');
 
     const result = await query(
       `INSERT INTO pages (slug, title, description, meta_title, meta_description, meta_keywords, layout, status)

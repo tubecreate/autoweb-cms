@@ -13,6 +13,13 @@ export default function RegisterPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(form.password)) {
+      setError('Password must be at least 8 characters long, contain at least 1 uppercase letter, and at least 1 special character.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -105,11 +112,10 @@ export default function RegisterPage() {
               <input
                 type="password"
                 className="login-input"
-                placeholder="Min 6 characters..."
+                placeholder="Min 8 chars, 1 upper, 1 special..."
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 required
-                minLength={6}
               />
             </div>
           </div>

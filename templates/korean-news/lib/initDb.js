@@ -165,7 +165,8 @@ export async function initDatabase() {
   console.log('✅ Database tables created and migrated');
 }
 
-export async function seedData() {
+export async function seedData(adminPassword) {
+  const passwordToSeed = adminPassword || 'admin123';
   // Seed Settings
   const defaultSettings = [
     ['site_title', 'DAILY KOREAN NEWS'],
@@ -215,7 +216,7 @@ export async function seedData() {
   try {
     const adminExists = await query('SELECT id FROM users WHERE username = ?', ['admin']);
     if (adminExists.length === 0) {
-      const hashedAdminPw = await hashPassword('admin123');
+      const hashedAdminPw = await hashPassword(passwordToSeed);
       await query(
         'INSERT INTO users (username, password, display_name, email, role, tier, active) VALUES (?, ?, ?, ?, ?, ?, 1)',
         ['admin', hashedAdminPw, '관리자', 'admin@dailykorean.news', 'admin', 'Enterprise']

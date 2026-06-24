@@ -30,6 +30,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Username, password, and email are required.' }, { status: 400 });
     }
 
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters long, contain at least 1 uppercase letter, and at least 1 special character.' }, { status: 400 });
+    }
+
     const existing = await query('SELECT id FROM users WHERE username = ?', [username]);
     if (existing.length) {
       return NextResponse.json({ error: 'Username already exists' }, { status: 409 });

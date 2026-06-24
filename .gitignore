@@ -38,3 +38,6 @@ npm-debug.log*
 # Uploads
 public/uploads/
 **/public/uploads/
+
+# Deployed sites (runtime generated)
+sites/

@@ -15,8 +15,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Username must be at least 3 characters and contain no spaces.' }, { status: 400 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 });
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters long, contain at least 1 uppercase letter, and at least 1 special character.' }, { status: 400 });
     }
 
     // Check if user already exists

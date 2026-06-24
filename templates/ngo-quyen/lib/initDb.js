@@ -214,11 +214,12 @@ export async function initDatabase() {
 }
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
-export async function seedData() {
+export async function seedData(adminPassword) {
+  const passwordToSeed = adminPassword || 'admin123';
   // Seed admin user
   const existingAdmin = await query('SELECT id FROM users WHERE username = ?', ['admin']);
   if (existingAdmin.length === 0) {
-    const hashed = await bcrypt.hash('admin123', 10);
+    const hashed = await bcrypt.hash(passwordToSeed, 10);
     await query(
       'INSERT INTO users (username, password, display_name, email, role, active, join_date) VALUES (?,?,?,?,?,1,?)',
       ['admin', hashed, 'Quản trị viên', 'admin@ngo-quyen.edu.vn', 'admin', '2026-01-01']

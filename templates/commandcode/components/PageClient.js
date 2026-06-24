@@ -3,8 +3,25 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlockRenderer from '@/components/BlockRenderer';
 
+function parsePageLayout(layoutStr) {
+  try {
+    const parsed = layoutStr ? JSON.parse(layoutStr) : [];
+    if (Array.isArray(parsed)) {
+      return { pageLayout: '1_col', blocks: parsed };
+    }
+    return {
+      pageLayout: parsed.pageLayout || '1_col',
+      blocks: Array.isArray(parsed.blocks) ? parsed.blocks : []
+    };
+  } catch {
+    return { pageLayout: '1_col', blocks: [] };
+  }
+}
+
 export default function PageClient({ page }) {
-  const parsedBlocks = page.layout ? JSON.parse(page.layout) : [];
+  const { pageLayout, blocks } = parsePageLayout(page.layout);
+  const mainBlocks = blocks.filter(b => b.col !== 'sidebar');
+  const sidebarBlocks = blocks.filter(b => b.col === 'sidebar');
 
   return (
     <div className="relative min-h-screen bg-black text-white flex flex-col justify-between">
@@ -28,7 +45,41 @@ export default function PageClient({ page }) {
             )}
           </div>
 
-          <BlockRenderer blocks={parsedBlocks} />
+          {pageLayout === '1_col' ? (
+            <BlockRenderer blocks={blocks} />
+          ) : (
+            <div className="grid-columns-layout" style={{
+              display: 'grid',
+              gap: '32px',
+              width: '100%',
+              alignItems: 'start',
+              gridTemplateColumns: pageLayout === '2_col_equal' 
+                ? '1fr 1fr' 
+                : pageLayout === '2_col_left' 
+                ? '1fr 2.3fr' 
+                : '2.3fr 1fr'
+            }}>
+              {pageLayout === '2_col_left' ? (
+                <>
+                  <div className="col-item">
+                    <BlockRenderer blocks={sidebarBlocks} />
+                  </div>
+                  <div className="col-item">
+                    <BlockRenderer blocks={mainBlocks} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="col-item">
+                    <BlockRenderer blocks={mainBlocks} />
+                  </div>
+                  <div className="col-item">
+                    <BlockRenderer blocks={sidebarBlocks} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </main>
       </div>
 

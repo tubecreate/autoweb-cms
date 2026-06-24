@@ -66,7 +66,7 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const layoutStr = Array.isArray(layout) ? JSON.stringify(layout) : (layout || currentPage.layout || '[]');
+    const layoutStr = typeof layout === 'object' && layout !== null ? JSON.stringify(layout) : (layout || currentPage.layout || '[]');
 
     await query(
       `UPDATE pages

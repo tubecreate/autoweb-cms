@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const navItems = [
   { section: 'ANALYTICS' },
   { href: '/admin', label: 'Dashboard', icon: '📊' },
+  { href: '/admin/profile', label: 'Profile Settings', icon: '👤' },
   { section: 'MANAGEMENT' },
   { href: '/admin/posts', label: 'Changelog / Posts', icon: '📝' },
   { href: '/admin/files', label: 'Files / Media', icon: '📁' },

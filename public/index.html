@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Website Manager - Cloudflare deployer</title>
+  <title>AutoWeb CMS — Cloudflare Website Manager</title>
+  <meta name="description" content="Tự động hóa build & deploy website Next.js lên Cloudflare Workers. Quản lý nhiều tài khoản Cloudflare, chọn theme và tạo website chỉ trong vài phút.">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,140 +12,275 @@
 </head>
 <body>
   <div class="glow-bg"></div>
-  <div class="app-container">
-    <!-- Header -->
-    <header class="header">
-      <div class="logo-area">
-        <div class="logo-icon">⚡</div>
-        <div>
-          <h1>Cloudflare Website Manager</h1>
-          <p class="subtitle">Tự động hóa build & deploy Next.js sang Cloudflare Workers Pages</p>
-        </div>
-      </div>
-      <button class="btn btn-primary" id="btn-open-modal">
-        <span class="icon">+</span> Tạo Website Mới
-      </button>
-    </header>
 
-    <!-- Stats Section -->
-    <section class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon purple">🌐</div>
-        <div class="stat-info">
-          <span class="stat-label">Tổng số Website</span>
-          <span class="stat-value" id="stat-total">0</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green">✅</div>
-        <div class="stat-info">
-          <span class="stat-label">Hoạt động</span>
-          <span class="stat-value" id="stat-active">0</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon yellow">⚙️</div>
-        <div class="stat-info">
-          <span class="stat-label">Đang triển khai</span>
-          <span class="stat-value" id="stat-deploying">0</span>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon red">❌</div>
-        <div class="stat-info">
-          <span class="stat-label">Thất bại</span>
-          <span class="stat-value" id="stat-failed">0</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Main Section: Website Grid -->
-    <main class="main-content">
-      <div class="section-header">
-        <h2>Danh sách Website</h2>
-        <div class="search-bar">
-          <input type="text" id="search-input" placeholder="Tìm kiếm website...">
+  <div class="app-layout">
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">⚡</div>
+        <div class="brand-text">
+          <span class="brand-name">AutoWeb</span>
+          <span class="brand-sub">CMS</span>
         </div>
       </div>
 
-      <div class="sites-grid" id="sites-grid">
-        <!-- Site cards will be loaded here dynamically -->
-        <div class="empty-state" id="empty-state">
-          <div class="empty-icon">📁</div>
-          <h3>Chưa có website nào được tạo</h3>
-          <p>Nhấp vào nút "Tạo Website Mới" để bắt đầu build website đầu tiên của bạn.</p>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" id="nav-themes" onclick="switchTab('themes')">
+          <span class="nav-icon">🎨</span>
+          <span class="nav-label">Chọn Theme</span>
+        </button>
+        <button class="nav-item" id="nav-sites" onclick="switchTab('sites')">
+          <span class="nav-icon">🌐</span>
+          <span class="nav-label">Websites</span>
+          <span class="nav-badge" id="nav-sites-count">0</span>
+        </button>
+        <button class="nav-item" id="nav-config" onclick="switchTab('config')">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Cấu hình CF</span>
+          <span class="nav-badge" id="nav-config-count">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-stats">
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="stat-active">0</span>
+            <span class="mini-stat-lbl">Active</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="stat-deploying">0</span>
+            <span class="mini-stat-lbl">Deploying</span>
+          </div>
+          <div class="mini-stat">
+            <span class="mini-stat-val" id="stat-failed">0</span>
+            <span class="mini-stat-lbl">Failed</span>
+          </div>
         </div>
       </div>
-    </main>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="main-wrapper">
+      <!-- Header -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 class="page-title" id="page-title">Chọn Theme</h1>
+          <p class="page-subtitle" id="page-subtitle">Chọn giao diện để bắt đầu tạo website của bạn</p>
+        </div>
+        <div class="topbar-right">
+          <div class="search-wrap" id="search-wrap" style="display:none">
+            <input type="text" id="search-input" class="topbar-search" placeholder="Tìm kiếm website...">
+          </div>
+          <button class="btn btn-primary" id="btn-add-cf-profile" style="display:none" onclick="openAddProfileModal()">
+            <span>+</span> Thêm cấu hình
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== TAB: THEMES ===== -->
+      <section class="tab-panel active" id="tab-themes">
+        <div class="themes-grid" id="themes-grid">
+          <!-- Injected by JS -->
+        </div>
+      </section>
+
+      <!-- ===== TAB: SITES ===== -->
+      <section class="tab-panel" id="tab-sites">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon purple">🌐</div>
+            <div class="stat-info">
+              <span class="stat-label">Tổng số Website</span>
+              <span class="stat-value" id="stat-total">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div class="stat-info">
+              <span class="stat-label">Hoạt động</span>
+              <span class="stat-value" id="stat-active-card">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow">⚙️</div>
+            <div class="stat-info">
+              <span class="stat-label">Đang triển khai</span>
+              <span class="stat-value" id="stat-deploying-card">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">❌</div>
+            <div class="stat-info">
+              <span class="stat-label">Thất bại</span>
+              <span class="stat-value" id="stat-failed-card">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="sites-grid" id="sites-grid">
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">📁</div>
+            <h3>Chưa có website nào được tạo</h3>
+            <p>Vào tab <strong>Chọn Theme</strong> để bắt đầu tạo website đầu tiên.</p>
+            <button class="btn btn-primary" onclick="switchTab('themes')" style="margin-top:16px">🎨 Chọn Theme</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== TAB: CLOUDFLARE CONFIG ===== -->
+      <section class="tab-panel" id="tab-config">
+        <div class="config-intro">
+          <div class="config-intro-icon">☁️</div>
+          <div>
+            <h3>Quản lý tài khoản Cloudflare</h3>
+            <p>Lưu nhiều cấu hình API Cloudflare. Khi tạo website, chỉ cần chọn một trong các cấu hình đã lưu.</p>
+          </div>
+        </div>
+
+        <div class="cf-profiles-list" id="cf-profiles-list">
+          <!-- Injected by JS -->
+        </div>
+
+        <div class="empty-state" id="empty-profiles-state" style="display:none">
+          <div class="empty-icon">🔑</div>
+          <h3>Chưa có cấu hình nào</h3>
+          <p>Nhấn nút <strong>"+ Thêm cấu hình"</strong> phía trên để thêm tài khoản Cloudflare đầu tiên.</p>
+        </div>
+      </section>
+    </div>
   </div>
 
-  <!-- Modal: Create New Site -->
+  <!-- ===================================================== -->
+  <!-- MODAL: TẠO WEBSITE MỚI (từ theme)                     -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="create-modal">
-    <div class="modal-card">
+    <div class="modal-card modal-create">
       <div class="modal-header">
-        <h3>Tạo Website Mới</h3>
-        <button class="btn-close" id="btn-close-modal">&times;</button>
+        <div class="modal-header-info">
+          <div class="modal-theme-badge" id="modal-theme-badge">🎨</div>
+          <div>
+            <h3>Tạo Website Mới</h3>
+            <p class="modal-subtitle" id="modal-theme-name-text">Theme: -</p>
+          </div>
+        </div>
+        <button class="btn-close" id="btn-close-modal">×</button>
       </div>
       <form id="create-site-form" class="modal-body">
-        <!-- Site configuration -->
         <div class="form-group">
-          <label for="site-name">Tên Website <span class="required">*</span></label>
-          <input type="text" id="site-name" placeholder="ví dụ: ngo-quyen-haiphong" required pattern="^[a-z0-9\-]+$" title="Chỉ sử dụng chữ thường, số và dấu gạch ngang (không khoảng trắng)">
-          <small class="helper-text">Sẽ được dùng để tạo Tên Worker, D1 DB, R2 Bucket và Subdomain của bạn.</small>
+          <label for="site-title">Tiêu đề Website <span class="required">*</span></label>
+          <input type="text" id="site-title" placeholder="ví dụ: Trường Tiểu Học Ngô Quyền" required autocomplete="off">
         </div>
 
         <div class="form-group">
-          <label for="site-template">Mẫu Website (Template) <span class="required">*</span></label>
-          <select id="site-template" required>
-            <option value="ngo-quyen" selected>Trang tin tức tiếng Việt (Ngô Quyền Portal)</option>
-            <option value="commandcode">Landing Page tiếng Anh (Command Code)</option>
-            <option value="korean-news">Báo tiếng Hàn (Daily Korean News)</option>
-          </select>
-          <small class="helper-text">Chọn mẫu giao diện/chức năng ban đầu cho trang web.</small>
+          <label for="site-name">Tên định danh (ID) <span class="required">*</span></label>
+          <input type="text" id="site-name" placeholder="ví dụ: truong-ngo-quyen" required pattern="^[a-z0-9\-]+$" title="Chỉ dùng chữ thường, số và dấu gạch ngang" autocomplete="off">
+          <small class="helper-text">Tự động tạo từ tiêu đề. Dùng để tạo Worker, D1 DB, R2 Bucket và Subdomain. Chỉ dùng: <code>a-z</code>, <code>0-9</code>, <code>-</code></small>
         </div>
 
-        <div class="divider">Thông tin tài khoản Cloudflare</div>
-
-        <div class="form-group-row">
-          <div class="form-group">
-            <label for="cf-auth-type">Loại xác thực</label>
-            <select id="cf-auth-type">
-              <option value="key">Global API Key & Email (Mặc định)</option>
-              <option value="token">Scoped API Token</option>
-            </select>
+        <div class="form-group">
+          <label for="site-admin-password">Mật khẩu Admin <span class="required">*</span></label>
+          <div class="password-input-wrap">
+            <input type="password" id="site-admin-password" placeholder="Nhập mật khẩu quản trị..." required autocomplete="new-password">
+            <button type="button" class="btn-eye" onclick="togglePassword('site-admin-password', this)">👁</button>
           </div>
-          <div class="form-group">
-            <label for="cf-account-id">Account ID <span class="required">*</span></label>
-            <input type="text" id="cf-account-id" placeholder="1e59abca..." required>
+          <small class="helper-text">Mật khẩu phải tối thiểu 8 ký tự, chứa ít nhất 1 chữ hoa (A-Z) và 1 ký tự đặc biệt. Dùng để đăng nhập vào trang quản trị (<code>/admin</code>) của website mới.</small>
+        </div>
+
+        <div class="divider">Cấu hình Cloudflare</div>
+
+        <div class="cf-profile-selector" id="cf-profile-selector">
+          <!-- Injected by JS -->
+        </div>
+
+        <div class="no-profiles-warning" id="no-profiles-warning" style="display:none">
+          <div class="warning-box">
+            <span>⚠️</span>
+            <div>
+              <strong>Chưa có cấu hình Cloudflare nào.</strong>
+              <p>Bạn cần thêm ít nhất một cấu hình trước khi tạo website.</p>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('create-modal'); switchTab('config'); openAddProfileModal()">
+                + Thêm cấu hình ngay
+              </button>
+            </div>
           </div>
-        </div>
-
-        <div class="form-group" id="group-api-key">
-          <label for="cf-api-key">Global API Key <span class="required">*</span></label>
-          <input type="password" id="cf-api-key" placeholder="cfk_...">
-        </div>
-
-        <div class="form-group" id="group-email">
-          <label for="cf-email">Cloudflare Email <span class="required">*</span></label>
-          <input type="email" id="cf-email" placeholder="ví dụ: user@example.com">
-        </div>
-
-        <div class="form-group d-none" id="group-api-token">
-          <label for="cf-api-token">API Token <span class="required">*</span></label>
-          <input type="password" id="cf-api-token" placeholder="Nhập Cloudflare API Token">
         </div>
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Hủy</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-create">
-            <span class="btn-loader d-none"></span> Build & Deploy
+            <span class="btn-loader d-none"></span> 🚀 Build & Deploy
           </button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal: Live Terminal Log Viewer -->
+  <!-- ===================================================== -->
+  <!-- MODAL: THÊM / SỬA CF PROFILE                          -->
+  <!-- ===================================================== -->
+  <div class="modal-backdrop" id="profile-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="profile-modal-title">Thêm cấu hình Cloudflare</h3>
+        <button class="btn-close" id="btn-close-profile">×</button>
+      </div>
+      <form id="profile-form" class="modal-body">
+        <input type="hidden" id="profile-edit-id">
+
+        <div class="form-group">
+          <label for="profile-name">Tên mô tả <span class="required">*</span></label>
+          <input type="text" id="profile-name" placeholder="ví dụ: Tài khoản cá nhân, Account công ty..." required>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-account-id">Account ID <span class="required">*</span></label>
+          <input type="text" id="profile-account-id" placeholder="ví dụ: 1e59abca10d4d3c00c33fd172c5cf6a2" required>
+          <small class="helper-text">Tìm trong Cloudflare Dashboard → phần Workers & Pages → Account ID</small>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-auth-type">Loại xác thực</label>
+          <select id="profile-auth-type" onchange="onProfileAuthTypeChange()">
+            <option value="key">Global API Key & Email (Mặc định)</option>
+            <option value="token">Scoped API Token</option>
+          </select>
+        </div>
+
+        <div id="profile-group-key">
+          <div class="form-group">
+            <label for="profile-api-key">Global API Key <span class="required">*</span></label>
+            <div class="password-input-wrap">
+              <input type="password" id="profile-api-key" placeholder="cfk_... hoặc API Key của bạn">
+              <button type="button" class="btn-eye" onclick="togglePassword('profile-api-key', this)" title="Hiện/ẩn">👁</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="profile-email">Email Cloudflare <span class="required">*</span></label>
+            <input type="email" id="profile-email" placeholder="user@example.com">
+          </div>
+        </div>
+
+        <div id="profile-group-token" class="d-none">
+          <div class="form-group">
+            <label for="profile-api-token">API Token <span class="required">*</span></label>
+            <div class="password-input-wrap">
+              <input type="password" id="profile-api-token" placeholder="cfut_...">
+              <button type="button" class="btn-eye" onclick="togglePassword('profile-api-token', this)" title="Hiện/ẩn">👁</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('profile-modal')">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-profile">Lưu cấu hình</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================== -->
+  <!-- MODAL: TERMINAL LOG                                    -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="log-modal">
     <div class="modal-card modal-large">
       <div class="modal-header">
@@ -152,7 +288,7 @@
           <h3>Build & Deployment Log Console</h3>
           <p class="modal-subtitle" id="log-site-name">Website: -</p>
         </div>
-        <button class="btn-close" id="btn-close-log">&times;</button>
+        <button class="btn-close" id="btn-close-log">×</button>
       </div>
       <div class="modal-body terminal-body">
         <div class="terminal-header">
@@ -164,42 +300,53 @@
           <div class="terminal-title">wrangler.log</div>
           <button class="btn-clear-terminal" id="btn-clear-log">Xóa log</button>
         </div>
-        <div class="terminal-content" id="terminal-content">
-          <!-- Terminal logs render here -->
-        </div>
+        <div class="terminal-content" id="terminal-content"></div>
       </div>
       <div class="modal-footer">
         <div class="status-indicator">
           Trạng thái: <span id="log-status-badge" class="badge">Đang tải</span>
         </div>
+        <a href="#" target="_blank" rel="noopener" class="btn btn-success d-none" id="btn-visit-site">🌐 Đi tới Website</a>
         <button type="button" class="btn btn-primary" id="btn-close-log-footer">Đóng Console</button>
       </div>
     </div>
   </div>
 
-  <!-- Confirm Dialog Delete -->
+  <!-- ===================================================== -->
+  <!-- MODAL: XÁC NHẬN XÓA WEBSITE                           -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="delete-modal">
     <div class="modal-card modal-small">
       <div class="modal-header">
         <h3>Xác nhận xóa Website</h3>
-        <button class="btn-close" id="btn-close-delete">&times;</button>
+        <button class="btn-close" id="btn-close-delete">×</button>
       </div>
       <div class="modal-body">
         <p>Bạn có chắc chắn muốn xóa website <strong id="delete-site-name-text"></strong> không?</p>
-        <p class="warning-text">⚠️ Hành động này sẽ xóa toàn bộ mã nguồn của website này trên máy chủ cục bộ.</p>
+        <p class="warning-text">⚠️ Hành động này sẽ xóa toàn bộ mã nguồn trên máy chủ cục bộ.</p>
         <div class="form-checkbox-danger">
           <input type="checkbox" id="delete-cf-resources" checked>
-          <label for="delete-cf-resources">Xóa cả tài nguyên D1 Database, R2 Bucket và Worker trên Cloudflare</label>
+          <label for="delete-cf-resources">Xóa cả D1 Database, R2 Bucket và Worker trên Cloudflare</label>
+        </div>
+        
+        <div class="form-group" style="margin-top: 16px;">
+          <label for="delete-confirm-name">Xác nhận tên website để xóa:</label>
+          <input type="text" id="delete-confirm-name" placeholder="Nhập tên website..." autocomplete="off">
+          <p class="helper-text">Vui lòng nhập <strong id="delete-site-name-hint" style="color: var(--yellow);"></strong> để xác nhận hành động này.</p>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-cancel-delete">Hủy</button>
-        <button type="button" class="btn btn-danger" id="btn-confirm-delete">Xác nhận Xóa</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete" disabled>
+          <span class="btn-loader d-none"></span> Xác nhận Xóa
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Edit Website Settings -->
+  <!-- ===================================================== -->
+  <!-- MODAL: CÀI ĐẶT WEBSITE                                -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="settings-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -207,48 +354,39 @@
           <h3>Cấu hình Website</h3>
           <p class="modal-subtitle" id="settings-site-name-text">Website: -</p>
         </div>
-        <button class="btn-close" id="btn-close-settings">&times;</button>
+        <button class="btn-close" id="btn-close-settings">×</button>
       </div>
       <form id="settings-form" class="modal-body">
         <div class="divider">Cấu hình tiêu đề & SEO</div>
-        
         <div class="form-group">
           <label for="settings-main-title">Tiêu đề chính Website (Header)</label>
           <input type="text" id="settings-main-title" placeholder="ví dụ: TRƯỜNG TIỂU HỌC NGÔ QUYỀN">
         </div>
-
         <div class="form-group">
           <label for="settings-upper-title">Tiêu đề phụ cấp trên (Header)</label>
           <input type="text" id="settings-upper-title" placeholder="ví dụ: SỞ GIÁO DỤC VÀ ĐÀO TẠO ĐÀ NẴNG">
         </div>
-
         <div class="form-group">
           <label for="settings-description">Mô tả khẩu hiệu (Header)</label>
           <input type="text" id="settings-description" placeholder="ví dụ: CỔNG THÔNG TIN ĐIỆN TỬ CHÍNH THỨC">
         </div>
-
         <div class="form-group">
           <label for="settings-seo-title">Tiêu đề SEO trang chủ</label>
           <input type="text" id="settings-seo-title" placeholder="ví dụ: Trường Tiểu học Ngô Quyền - Đà Nẵng">
         </div>
-
         <div class="form-group">
           <label for="settings-seo-description">Mô tả SEO trang chủ</label>
           <input type="text" id="settings-seo-description" placeholder="Nhập mô tả SEO cho Google tìm kiếm">
         </div>
-
         <div class="divider">Cấu hình Logo & Banner</div>
-
         <div class="form-group">
           <label for="settings-logo-url">Đường dẫn Logo URL</label>
-          <input type="text" id="settings-logo-url" placeholder="ví dụ: /logos/logo_ngo_quyen.png hoặc link ảnh">
+          <input type="text" id="settings-logo-url" placeholder="ví dụ: /logos/logo.png hoặc link ảnh">
         </div>
-
         <div class="form-group">
           <label for="settings-banner-url">Đường dẫn Banner URL</label>
           <input type="text" id="settings-banner-url" placeholder="ví dụ: /logos/bghead.jpg hoặc link ảnh">
         </div>
-
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-cancel-settings">Hủy</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-settings">
@@ -259,7 +397,9 @@
     </div>
   </div>
 
-  <!-- Modal: API Key & WP API Examples -->
+  <!-- ===================================================== -->
+  <!-- MODAL: API KEY MANAGER                                 -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="api-modal">
     <div class="modal-card modal-large">
       <div class="modal-header">
@@ -267,20 +407,15 @@
           <h3>Quản lý API Key & Tích hợp WordPress</h3>
           <p class="modal-subtitle" id="api-site-name-text">Website: -</p>
         </div>
-        <button class="btn-close" id="btn-close-api">&times;</button>
+        <button class="btn-close" id="btn-close-api">×</button>
       </div>
-      
-      <!-- Tab navigation -->
       <div class="tabs-nav">
         <button class="tab-btn active" onclick="switchApiTab('manage-keys')">🔑 Khóa API</button>
         <button class="tab-btn" onclick="switchApiTab('api-examples')">📖 Tài liệu & Ví dụ</button>
       </div>
-
       <div class="modal-body">
-        <!-- Tab 1: Manage Keys -->
         <div id="tab-manage-keys" class="tab-content">
-          <p class="section-intro">Tạo và quản lý các khóa API để kết nối với WordPress REST API của website. Bạn có thể sử dụng các key này để đồng bộ bài viết tự động từ Zapier, Make, hoặc ứng dụng khác.</p>
-          
+          <p class="section-intro">Tạo và quản lý các khóa API để kết nối với WordPress REST API của website.</p>
           <form id="create-api-key-form" class="api-key-form-row">
             <div class="form-group flex-2">
               <label for="api-key-label">Tên mô tả khóa API <span class="required">*</span></label>
@@ -290,170 +425,88 @@
               <label for="api-key-user">Gắn với tài khoản</label>
               <select id="api-key-user">
                 <option value="admin">admin (Administrator)</option>
-                <option value="moderator">moderator (Staff Moderator)</option>
+                <option value="moderator">moderator (Staff)</option>
               </select>
             </div>
             <div class="form-group-btn">
-              <button type="submit" class="btn btn-primary" id="btn-submit-api-key" style="margin-top: 24px;">Tạo Key</button>
+              <button type="submit" class="btn btn-primary" id="btn-submit-api-key" style="margin-top:24px">Tạo Key</button>
             </div>
           </form>
-
-          <!-- Reveal Box for newly created key -->
           <div class="new-key-reveal-container d-none" id="new-key-reveal-box">
             <div class="reveal-card">
               <div class="reveal-icon">🔒</div>
               <div class="reveal-info">
-                <h4>Khóa API của bạn đã được tạo thành công!</h4>
-                <p>Sao chép và lưu trữ an toàn. Để bảo mật, khóa này sẽ <strong>không bao giờ hiển thị lại</strong>.</p>
+                <h4>Khóa API đã được tạo thành công!</h4>
+                <p>Sao chép và lưu trữ an toàn. Khóa này sẽ <strong>không bao giờ hiển thị lại</strong>.</p>
                 <div class="reveal-input-row">
                   <input type="text" id="generated-key-display" readonly>
-                  <button class="btn btn-primary btn-sm" id="btn-copy-key" onclick="copyGeneratedApiKey()">📋 Sao chép</button>
+                  <button class="btn btn-primary btn-sm" onclick="copyGeneratedApiKey()">📋 Sao chép</button>
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="divider" style="margin-top: 24px;">Khóa API hiện có</div>
-
+          <div class="divider" style="margin-top:24px">Khóa API hiện có</div>
           <div class="table-container">
             <table class="api-keys-table">
               <thead>
                 <tr>
                   <th>Tên mô tả</th>
                   <th>Tài khoản</th>
-                  <th>Mã định danh (Key Prefix)</th>
+                  <th>Key Prefix</th>
                   <th>Ngày tạo</th>
-                  <th style="text-align: right;">Thao tác</th>
+                  <th style="text-align:right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody id="api-keys-table-body">
-                <!-- Loaded dynamically -->
-              </tbody>
+              <tbody id="api-keys-table-body"></tbody>
             </table>
           </div>
         </div>
 
-        <!-- Tab 2: Examples -->
         <div id="tab-api-examples" class="tab-content d-none">
-          <p class="section-intro">Tích hợp WordPress REST API với website của bạn. Các endpoint hỗ trợ đầy đủ các yêu cầu tương thích với hệ sinh thái WordPress.</p>
-          
+          <p class="section-intro">Tích hợp WordPress REST API với website của bạn.</p>
           <div class="example-selector-bar">
-            <span class="selector-label">Chọn ngôn ngữ ví dụ:</span>
+            <span class="selector-label">Chọn ngôn ngữ:</span>
             <button class="selector-btn active" id="btn-ex-curl" onclick="switchExampleLang('curl')">cURL</button>
             <button class="selector-btn" id="btn-ex-js" onclick="switchExampleLang('js')">JavaScript</button>
             <button class="selector-btn" id="btn-ex-python" onclick="switchExampleLang('python')">Python</button>
           </div>
-
-          <!-- Code Box cURL -->
           <div class="code-box-wrapper" id="code-box-curl">
-            <div class="code-header">
-              <span>cURL Scripts</span>
-              <button class="btn-copy-code" onclick="copyCodeContent('code-curl-text')">Sao chép</button>
-            </div>
-            <pre class="code-content"><code id="code-curl-text"># 1. Lấy danh sách bài viết (Công khai)
-curl -X GET "https://[SITE_URL]/wp-json/wp/v2/posts"
-
-# 2. Đăng bài viết mới (Cần Xác thực Basic HTTP)
+            <div class="code-header"><span>cURL Scripts</span><button class="btn-copy-code" onclick="copyCodeContent('code-curl-text')">Sao chép</button></div>
+            <pre class="code-content"><code id="code-curl-text"># Đăng bài viết mới
 curl -X POST "https://[SITE_URL]/wp-json/wp/v2/posts" \
   -u "[USERNAME]:[API_KEY]" \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "Tiêu đề bài viết mới",
-    "content": "Nội dung bài viết bằng HTML hoặc text",
-    "status": "publish",
-    "summary": "Tóm tắt bài viết"
-  }'
-
-# 3. Cập nhật bài viết
-curl -X POST "https://[SITE_URL]/wp-json/wp/v2/posts/[POST_ID]" \
-  -u "[USERNAME]:[API_KEY]" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Tiêu đề cập nhật mới"
-  }'
-
-# 4. Xóa bài viết
-curl -X DELETE "https://[SITE_URL]/wp-json/wp/v2/posts/[POST_ID]" \
-  -u "[USERNAME]:[API_KEY]"</code></pre>
+  -d '{"title":"Tiêu đề","content":"Nội dung","status":"publish"}'</code></pre>
           </div>
-
-          <!-- Code Box JS -->
           <div class="code-box-wrapper d-none" id="code-box-js">
-            <div class="code-header">
-              <span>JavaScript Fetch API</span>
-              <button class="btn-copy-code" onclick="copyCodeContent('code-js-text')">Sao chép</button>
-            </div>
-            <pre class="code-content"><code id="code-js-text">// 1. Đăng bài viết mới sử dụng Fetch API
-const siteUrl = 'https://[SITE_URL]/wp-json/wp/v2/posts';
-const username = '[USERNAME]';
-const apiKey = '[API_KEY]';
-
-// Tạo mã token Basic Auth base64
-const token = btoa(`${username}:${apiKey}`);
-
-const payload = {
-  title: 'Tiêu đề bài viết từ JavaScript',
-  content: '&lt;p&gt;Nội dung bài viết hỗ trợ thẻ HTML.&lt;/p&gt;',
-  status: 'publish', // 'publish' = đăng ngay, 'draft' = nháp
-  summary: 'Tóm tắt bài viết mẫu'
-};
-
-fetch(siteUrl, {
+            <div class="code-header"><span>JavaScript Fetch</span><button class="btn-copy-code" onclick="copyCodeContent('code-js-text')">Sao chép</button></div>
+            <pre class="code-content"><code id="code-js-text">const token = btoa(`${username}:${apiKey}`);
+fetch('https://[SITE_URL]/wp-json/wp/v2/posts', {
   method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Basic ${token}`
-  },
-  body: JSON.stringify(payload)
-})
-.then(res => res.json())
-.then(data => console.log('Đã đăng:', data))
-.catch(err => console.error('Lỗi đăng bài:', err));</code></pre>
+  headers: { 'Authorization': `Basic ${token}`, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ title: 'Tiêu đề', content: 'Nội dung', status: 'publish' })
+});</code></pre>
           </div>
-
-          <!-- Code Box Python -->
           <div class="code-box-wrapper d-none" id="code-box-python">
-            <div class="code-header">
-              <span>Python Requests</span>
-              <button class="btn-copy-code" onclick="copyCodeContent('code-python-text')">Sao chép</button>
-            </div>
+            <div class="code-header"><span>Python Requests</span><button class="btn-copy-code" onclick="copyCodeContent('code-python-text')">Sao chép</button></div>
             <pre class="code-content"><code id="code-python-text">import requests
-from requests.auth import HTTPBasicAuth
-
-# Cấu hình endpoint của website
-site_url = "https://[SITE_URL]/wp-json/wp/v2/posts"
-username = "[USERNAME]"
-api_key = "[API_KEY]"
-
-# Dữ liệu bài viết
-payload = {
-    "title": "Tiêu đề bài viết từ Python Requests",
-    "content": "Nội dung bài viết của bạn.",
-    "status": "publish"
-}
-
-# Thực hiện POST request với Basic Auth
 response = requests.post(
-    site_url,
-    json=payload,
-    auth=HTTPBasicAuth(username, api_key)
-)
-
-if response.status_code == 201:
-    print("Đăng bài thành công:", response.json())
-else:
-    print("Thất bại:", response.status_code, response.text)</code></pre>
+    'https://[SITE_URL]/wp-json/wp/v2/posts',
+    json={"title": "Tiêu đề", "content": "Nội dung", "status": "publish"},
+    auth=('[USERNAME]', '[API_KEY]')
+)</code></pre>
           </div>
         </div>
       </div>
-
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="btn-close-api-footer">Đóng</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Cloudflare Credentials Manager -->
+  <!-- ===================================================== -->
+  <!-- MODAL: SỬA CLOUDFLARE CREDENTIALS (per site)          -->
+  <!-- ===================================================== -->
   <div class="modal-backdrop" id="credentials-modal">
     <div class="modal-card">
       <div class="modal-header">
@@ -461,7 +514,7 @@ else:
           <h3>Chỉnh sửa Key Cloudflare</h3>
           <p class="modal-subtitle" id="creds-site-name-text">Website: -</p>
         </div>
-        <button class="btn-close" id="btn-close-creds">&times;</button>
+        <button class="btn-close" id="btn-close-creds">×</button>
       </div>
       <form id="creds-form" class="modal-body">
         <div class="form-group">
@@ -471,27 +524,28 @@ else:
             <option value="token">Scoped API Token</option>
           </select>
         </div>
-        
         <div class="form-group">
           <label for="creds-account-id">Account ID <span class="required">*</span></label>
           <input type="text" id="creds-account-id" placeholder="Nhập Cloudflare Account ID" required>
         </div>
-
         <div class="form-group" id="creds-group-api-key">
           <label for="creds-api-key">Global API Key <span class="required">*</span></label>
-          <input type="password" id="creds-api-key" placeholder="Nhập Cloudflare Global API Key">
+          <div class="password-input-wrap">
+            <input type="password" id="creds-api-key" placeholder="Nhập Cloudflare Global API Key">
+            <button type="button" class="btn-eye" onclick="togglePassword('creds-api-key', this)" title="Hiện/ẩn">👁</button>
+          </div>
         </div>
-
         <div class="form-group" id="creds-group-email">
           <label for="creds-email">Cloudflare Email <span class="required">*</span></label>
-          <input type="email" id="creds-email" placeholder="ví dụ: user@example.com">
+          <input type="email" id="creds-email" placeholder="user@example.com">
         </div>
-
         <div class="form-group d-none" id="creds-group-api-token">
           <label for="creds-api-token">API Token <span class="required">*</span></label>
-          <input type="password" id="creds-api-token" placeholder="Nhập Cloudflare API Token">
+          <div class="password-input-wrap">
+            <input type="password" id="creds-api-token" placeholder="cfut_...">
+            <button type="button" class="btn-eye" onclick="togglePassword('creds-api-token', this)" title="Hiện/ẩn">👁</button>
+          </div>
         </div>
-
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="btn-cancel-creds">Hủy</button>
           <button type="submit" class="btn btn-primary" id="btn-submit-creds">Lưu cấu hình</button>

@@ -23,6 +23,11 @@ export async function POST(request) {
     const { username, password, display_name, email, role } = await request.json();
     if (!username || !password) return NextResponse.json({ error: 'Thiếu username/password' }, { status: 400 });
 
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json({ error: 'Mật khẩu phải có tối thiểu 8 ký tự, chứa ít nhất 1 chữ hoa (A-Z) và 1 ký tự đặc biệt' }, { status: 400 });
+    }
+
     const existing = await query('SELECT id FROM users WHERE username=?', [username]);
     if (existing.length) return NextResponse.json({ error: 'Username đã tồn tại' }, { status: 409 });
 

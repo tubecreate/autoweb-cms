@@ -33,8 +33,6 @@ export default function BlockRenderer({ blocks = [] }) {
               return <StatsBlock key={block.id} configs={block.configs} />;
             case 'html':
               return <HtmlBlock key={block.id} configs={block.configs} />;
-            case 'columns':
-              return <ColumnsBlock key={block.id} configs={block.configs} />;
             default:
               return null;
           }
@@ -659,39 +657,6 @@ function HtmlBlock({ configs = {} }) {
   return (
     <section className="app-container" style={{ margin: '30px auto', maxWidth: '800px', color: 'var(--foreground)' }}>
       <div dangerouslySetInnerHTML={{ __html: configs.html || '' }} />
-    </section>
-  );
-}
-
-// 12. Columns Block
-function ColumnsBlock({ configs = {} }) {
-  const layout = configs.layout || '2_equal';
-  
-  let gridStyle = {
-    display: 'grid',
-    gap: '32px',
-    margin: '30px auto',
-    width: '100%'
-  };
-  
-  if (layout === '1_col') {
-    gridStyle.gridTemplateColumns = '1fr';
-  } else if (layout === '2_equal') {
-    gridStyle.gridTemplateColumns = '1fr 1fr';
-  } else if (layout === '2_left_sidebar') {
-    gridStyle.gridTemplateColumns = '1fr 2.3fr';
-  } else if (layout === '2_right_sidebar') {
-    gridStyle.gridTemplateColumns = '2.3fr 1fr';
-  }
-
-  return (
-    <section className="app-container">
-      <div className="grid-columns-layout" style={gridStyle}>
-        <div className="col-item" dangerouslySetInnerHTML={{ __html: configs.col1Html || '' }} />
-        {layout !== '1_col' && (
-          <div className="col-item" dangerouslySetInnerHTML={{ __html: configs.col2Html || '' }} />
-        )}
-      </div>
     </section>
   );
 }

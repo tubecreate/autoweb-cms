@@ -23,6 +23,10 @@ export async function PUT(request, { params }) {
     }
     if (body.active !== undefined) { fields.push('active=?'); vals.push(body.active ? 1 : 0); }
     if (body.password) {
+      const passwordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+      if (!passwordRegex.test(body.password)) {
+        return NextResponse.json({ error: 'Mật khẩu phải có tối thiểu 8 ký tự, chứa ít nhất 1 chữ hoa (A-Z) và 1 ký tự đặc biệt' }, { status: 400 });
+      }
       const bcrypt = (await import('bcryptjs')).default;
       const hashed = await bcrypt.hash(body.password, 10);
       fields.push('password=?'); vals.push(hashed);

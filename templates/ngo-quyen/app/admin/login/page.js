@@ -108,12 +108,6 @@ export default function AdminLoginPage() {
         <div className="login-back" style={{marginTop:20}}>
           <Link href="/">← Về trang chủ</Link>
         </div>
-
-        <div style={{marginTop:20, padding:'14px 16px', background:'#f8fafc', borderRadius:8, fontSize:12, color:'#6b7280', lineHeight:1.6}}>
-          <strong style={{color:'#374151'}}>Tài khoản mặc định:</strong><br/>
-          👑 Admin: <code>admin</code> / <code>admin123</code><br/>
-          🛡️ Mod: <code>moderator</code> / <code>mod123</code>
-        </div>
       </div>
 
       <style>{`

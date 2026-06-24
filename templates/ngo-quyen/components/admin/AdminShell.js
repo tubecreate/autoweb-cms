@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 const navItems = [
   { section: 'TỔNG QUAN' },
   { href: '/admin', label: 'Dashboard', icon: '📊' },
+  { href: '/admin/profile', label: 'Thông tin cá nhân', icon: '👤' },
   { section: 'NỘI DUNG' },
   { href: '/admin/posts', label: 'Bài viết', icon: '📝' },
   { href: '/admin/notifications', label: 'Thông báo', icon: '🔔' },
