@@ -171,6 +171,11 @@ function analyzeError(err, context = '') {
     return '⚠️ Tên website đã tồn tại trên Cloudflare Pages. Chọn tên khác hoặc xóa project cũ trên CF Dashboard trước.';
   }
 
+  // Pages project not found
+  if (output.includes('project not found') || output.includes('8000007')) {
+    return '❌ Project Cloudflare Pages không tồn tại hoặc không tìm thấy trên tài khoản của bạn.';
+  }
+
   // Worker name conflict
   if (output.includes('already exists') && output.includes('worker')) {
     return '⚠️ Tên Worker đã tồn tại. Chọn tên khác hoặc xóa Worker cũ trên CF Dashboard.';
@@ -626,6 +631,22 @@ bucket_name = "${bucketName}"
     throw new Error(reason || `Build thất bại: ${err.message}`);
   }
   await writeLog(siteName, `[BUILD] Build hoàn tất!\n`);
+
+  // ─── STEP 7.5: Tạo Cloudflare Pages project nếu chưa có ──────────────────
+  await writeLog(siteName, `[DEPLOY] Kiểm tra/Tạo Cloudflare Pages project "${siteName}"...\n`);
+  try {
+    await runCommand('npx', ['wrangler', 'pages', 'project', 'create', siteName,
+      '--production-branch', 'main'
+    ], envOptions, siteName);
+  } catch (err) {
+    const output = (err.output || err.message || '').toLowerCase();
+    if (output.includes('already exists') || output.includes('project_already_exists') || output.includes('8000007')) {
+      await writeLog(siteName, `[DEPLOY] Project Pages đã tồn tại hoặc đã được tạo.\n`);
+    } else {
+      const reason = analyzeError(err, 'pages project create');
+      throw new Error(reason || `Không thể tạo project Pages: ${err.message}`);
+    }
+  }
 
   // ─── STEP 8: Deploy lên Cloudflare Pages (Direct Upload) ─────────────────
   await writeLog(siteName, `[DEPLOY] Uploading lên Cloudflare Pages...\n`);
